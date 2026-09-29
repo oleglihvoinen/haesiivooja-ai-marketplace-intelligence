@@ -4,7 +4,7 @@ A full-stack **AI + data engineering case** built around the operating model of 
 
 > The domain model is based on HaeSiivooja marketplace flows. The public implementation uses **synthetic/anonymized data** and contains no customer PII, exact addresses, Stripe identifiers or payment credentials.
 
-![HaeSiivooja AI Marketplace Intelligence architecture](docs/architecture.png)
+![HaeSiivooja AI Marketplace Intelligence architecture](docs/architecture-v2.png)
 
 ## Summary
 

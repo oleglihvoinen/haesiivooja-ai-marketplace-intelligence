@@ -1,0 +1,25 @@
+metrics:
+  - id: booking_gmv
+    label: Booking GMV
+    expression: sum(total_cents) / 100.0
+    unit: EUR
+    grain: day_city_service
+    owner: Marketplace Operations
+  - id: completed_bookings
+    label: Completed Bookings
+    expression: count_if(status = 'completed')
+    unit: bookings
+    grain: day_city_service
+    owner: Marketplace Operations
+  - id: cancellation_rate
+    label: Cancellation Rate
+    expression: cancelled_bookings / nullif(total_bookings, 0)
+    unit: ratio
+    grain: day_city_service
+    owner: Marketplace Operations
+  - id: supply_utilization
+    label: Supply Utilization
+    expression: booked_minutes / available_minutes
+    unit: ratio
+    grain: cleaner_week
+    owner: Marketplace Operations

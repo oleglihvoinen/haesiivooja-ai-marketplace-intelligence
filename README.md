@@ -75,8 +75,4 @@ make all
 uvicorn api.main:app --reload
 ```
 
-## Why this case matters
-
-The value is the combination of disciplines rather than a standalone prediction notebook. It demonstrates how to take a real SaaS domain from **transactional events to governed data products, predictive features, model training, ranking, APIs and operational integration**.
-
 **Technologies:** Python · Pandas · scikit-learn · FastAPI · Pydantic · feature engineering · demand forecasting · ranking · semantic metrics · marketplace analytics · CI/CD · MySQL CDC/Kafka/Snowflake/Fabric-ready architecture

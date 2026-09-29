@@ -2,7 +2,9 @@
 
 A full-stack **AI + data engineering case** built around the operating model of a two-sided cleaning-services SaaS marketplace. The platform turns booking, availability, service, pricing and quality signals into demand forecasts, cleaner-ranking decisions and governed marketplace metrics.
 
-> The domain model is based on HaeSiivooja marketplace flows. The public implementation uses **synthetic/anonymized data** and contains no customer PII, exact addresses, Stripe identifiers or payment credentials.\n\n![HaeSiivooja AI Marketplace Intelligence architecture](docs/architecture.png)
+> The domain model is based on HaeSiivooja marketplace flows. The public implementation uses **synthetic/anonymized data** and contains no customer PII, exact addresses, Stripe identifiers or payment credentials.
+
+![HaeSiivooja AI Marketplace Intelligence architecture](docs/architecture.png)
 
 ## Summary
 

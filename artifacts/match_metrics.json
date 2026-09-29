@@ -1,0 +1,4 @@
+{
+  "roc_auc": 0.7463,
+  "note": "Synthetic ranking labels used to validate the pipeline; not a production HaeSiivooja performance claim."
+}

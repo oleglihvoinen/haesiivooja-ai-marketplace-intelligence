@@ -30,7 +30,7 @@ jobs:
               img.verify()
           with Image.open(p) as img:
               assert img.format == "PNG"
-              assert img.size == (1600, 900)
+              assert img.size == (1800, 1080)
           print("Validated", p)
           PY
       - name: Commit generated PNG

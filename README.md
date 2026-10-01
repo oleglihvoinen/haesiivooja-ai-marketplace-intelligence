@@ -1,73 +1,116 @@
-# HaeSiivooja AI Marketplace Intelligence Platform
+# HaeSiivooja Real-Time Marketplace Intelligence & AI Decision Platform
 
-A full-stack **AI + data engineering case** built around the operating model of a two-sided cleaning-services SaaS marketplace. The platform turns booking, availability, service, pricing and quality signals into demand forecasts, cleaner-ranking decisions and governed marketplace metrics.
+A production-oriented **data engineering + applied AI architecture** built around the operating model of HaeSiivooja, a web and mobile cleaning-services SaaS marketplace. The platform connects marketplace events to governed data products, predictive models, decision recommendations and controlled operational actions.
 
-> The domain model is based on HaeSiivooja marketplace flows. The public implementation uses **synthetic/anonymized data** and contains no customer PII, exact addresses, Stripe identifiers or payment credentials.
+> The public implementation uses deterministic synthetic/anonymized marketplace data. It contains no customer PII, exact addresses, Stripe identifiers, payment credentials or production records.
 
-![HaeSiivooja AI Marketplace Intelligence architecture](docs/architecture.png)
+![HaeSiivooja Real-Time Marketplace Intelligence & AI Decision Platform architecture](docs/architecture.png)
 
 ## Summary
 
-Marketplace products have a difficult data problem: demand changes by time and location, supply is constrained by individual availability, and the best match is not simply the cheapest provider. A useful AI system therefore has to combine **transactional data engineering, temporal features, marketplace metrics, predictive models, ranking logic, operational APIs and governance**.
+A two-sided marketplace must continuously balance **customer demand, cleaner supply, availability, price, quality, location and service compatibility**. Reporting alone is not enough: operational value comes from detecting changing conditions, predicting what happens next, recommending an appropriate intervention and measuring the outcome.
 
-This case implements that end-to-end pattern.
+This case therefore uses a closed-loop architecture:
 
-## Business capabilities
+**Observe → Predict → Recommend → Approve → Act → Measure → Improve**
 
-- forecast booking demand by city, service and date
-- rank eligible cleaners using quality, reliability, distance, price and utilization signals
-- expose AI decisions through FastAPI
-- publish governed marketplace metrics such as GMV, cancellation rate and supply utilization
-- preserve a clear boundary between operational SaaS data, analytical features and decision services
-- demonstrate a privacy-safe path from a real product domain to public AI engineering work
+The repository combines a reproducible public implementation with a production real-time architecture that maps HaeSiivooja SaaS events to **MySQL CDC, Debezium, Kafka, Bronze/Silver/Gold data products, governed metrics, ML models, decision APIs and outcome feedback**.
 
-## Architecture
+## Implemented in this repository
 
-**HaeSiivooja web/mobile SaaS** → bookings / availability / services / ratings / payment outcomes → analytical event history → standardized marketplace entities → Gold metrics & feature tables → **Demand Forecast + Cleaner Ranker** → FastAPI → customer/cleaner experiences + operations.
+- deterministic synthetic marketplace data modeled on HaeSiivooja business entities
+- demand and cleaner feature pipelines
+- gradient-boosted demand forecasting with chronological holdout validation
+- cleaner match ranking with quality guardrails
+- governed semantic metric contracts
+- FastAPI forecast and matching endpoints
+- marketplace supply-demand decision endpoint
+- recommendation-only operational actions with explicit human-approval flags
+- automated feature and decision tests
+- CI validation
+- reproducible colored architecture generation
 
-A production cloud implementation can map the same logical design to **MySQL CDC → Debezium/Kafka → Snowflake/dbt** or **Microsoft Fabric / OneLake / Lakehouse**.
+## Real-time production design
 
-## Real HaeSiivooja domain alignment
+The production extension captures operational changes from HaeSiivooja rather than relying on periodic extracts:
 
-The source product already contains the business concepts required for this platform: cleaners, bookings, recurring/blocked availability, services, apartment size, locations, ratings, pricing/duration, booking status and Stripe-connected payment flows. The public dataset generator reproduces these analytical shapes without exposing production records.
+**Web / Android / iOS SaaS → MySQL → Debezium CDC → Kafka → Bronze event history → Silver marketplace model → Gold metrics & features → ML models → semantic/governance layer → AI decision service → policy & human approval → action APIs → applications**
 
-## Data products
+Outcome events such as conversions, accepted availability, completed bookings, cancellations and quality signals flow back into the platform so decisions can be evaluated and improved.
 
-### Marketplace demand feature table
-Daily city/service grain with booking volume, completed/cancelled counts, booked minutes, GMV proxy, calendar features and cancellation rate.
+The same governed data layers can be implemented with either **Snowflake/dbt** or **Microsoft Fabric / OneLake / Lakehouse**.
 
-### Cleaner feature table
-Per-cleaner quality and capacity signals: rating, reliability, completion rate, booked minutes, utilization proxy, price and historical marketplace value.
+## Marketplace decisions
 
-### Governed metric contracts
-Machine-readable definitions for Booking GMV, Completed Bookings, Cancellation Rate and Supply Utilization.
+The decision layer combines demand forecasts with supply/capacity signals and returns explicit recommendations rather than silently changing the marketplace.
 
-## AI models
+Example actions include:
 
-### Demand forecasting
-A gradient-boosted regression pipeline predicts booking demand by city, service and calendar context. The training workflow uses a chronological holdout rather than a random split.
+- availability campaigns when forecast demand exceeds cleaner capacity
+- wider matching-radius evaluation when local supply is insufficient
+- incentive simulation for material shortages
+- cleaner matching optimization
+- no-intervention decisions when capacity already covers forecast demand
 
-### Marketplace match ranking
-A gradient-boosted classifier produces a match probability from distance, relative price, rating, reliability, completion rate and utilization. A separate quality guardrail contributes to the final ranking score.
+The public endpoint operates in **recommendation-only mode**. Financial or customer-impacting actions require a separate policy/approval boundary.
 
-The public ranking labels are synthetic, so model metrics demonstrate the engineering workflow rather than real HaeSiivooja marketplace performance.
-
-## Decision API
+## API
 
 - `GET /health`
 - `POST /api/v1/demand-forecast`
 - `POST /api/v1/match`
+- `POST /api/v1/marketplace-decision`
 
-The API layer keeps models behind stable service contracts suitable for integration into web/mobile SaaS experiences.
+The API keeps predictive and decision logic behind stable service contracts so models and policies can evolve independently from the web, Android and iOS applications.
+
+## Governed data products
+
+### Marketplace demand features
+Daily city/service grain with booking volume, completions, cancellations, booked minutes, gross marketplace value, calendar features and cancellation rate.
+
+### Cleaner features
+Per-cleaner quality and capacity signals including rating, reliability, historical completion rate, booked minutes, utilization proxy, relative price and marketplace value.
+
+### Semantic metric contracts
+Machine-readable definitions for Booking GMV, Completed Bookings, Cancellation Rate and Supply Utilization, including grain and ownership.
+
+## AI capabilities
+
+### Demand forecasting
+A gradient-boosted regression pipeline predicts booking demand by city, service and calendar context. Validation uses a chronological holdout to avoid future-to-past leakage.
+
+### Cleaner ranking
+A gradient-boosted classifier ranks already-eligible cleaners using distance, relative price, rating, reliability, completion history and utilization. Availability and service compatibility remain deterministic business constraints.
+
+### Decision intelligence
+Forecasts and supply signals are translated into explainable recommended actions. The public implementation does not autonomously execute campaigns, change pricing or move money.
+
+## Real-time event contracts
+
+The repository includes a Debezium CDC connector example and a versioned booking-event JSON Schema under `streaming/` and `events/`. These artifacts show how operational database changes can enter Kafka with explicit contracts before downstream transformation.
+
+## Observability & reliability
+
+A production deployment should monitor:
+
+- event freshness and consumer lag
+- schema compatibility
+- pipeline and model failures
+- data-quality rules
+- feature freshness
+- forecast/ranking drift
+- decision outcomes
+- lineage from source event to recommendation
 
 ## Privacy & governance
 
-- no real names, emails, phone numbers or addresses
-- no Stripe customer/payment/account identifiers
-- synthetic cleaner and booking IDs
-- city-level location only
-- metric definitions have explicit ownership
-- production architecture should separate PII from analytical identifiers and enforce GDPR retention/access policies
+- no public production identities or payment identifiers
+- pseudonymous analytical identifiers
+- city-level public geography
+- explicit metric ownership
+- separation of predictive recommendations from action authorization
+- GDPR retention/access controls in production
+- auditable decision and approval events
 
 ## Run locally
 
@@ -77,4 +120,18 @@ make all
 uvicorn api.main:app --reload
 ```
 
-**Technologies:** Python · Pandas · scikit-learn · FastAPI · Pydantic · feature engineering · demand forecasting · ranking · semantic metrics · marketplace analytics · CI/CD · MySQL CDC/Kafka/Snowflake/Fabric-ready architecture
+## Repository structure
+
+```text
+api/          FastAPI prediction and decision services
+artifacts/    Synthetic model-validation outputs
+docs/         Architecture documentation and generated diagram
+events/       Versioned event contracts
+ml/           Forecasting and ranking training
+semantic/     Governed marketplace metric contracts
+src/          Synthetic data and feature pipelines
+streaming/    CDC / Kafka integration design
+tests/        Feature and decision tests
+```
+
+**Technologies:** Python · Pandas · scikit-learn · FastAPI · Pydantic · MySQL · Debezium CDC · Apache Kafka · Bronze/Silver/Gold architecture · feature engineering · demand forecasting · ranking · decision intelligence · semantic metrics · CI/CD · Snowflake/dbt · Microsoft Fabric/OneLake

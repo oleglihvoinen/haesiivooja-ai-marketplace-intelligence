@@ -9,7 +9,13 @@ from fastapi import FastAPI, HTTPException
 from pydantic import BaseModel, Field
 
 ROOT = Path(__file__).resolve().parents[1]
-app = FastAPI(title="HaeSiivooja Marketplace Intelligence API", version="1.0.0")
+app = FastAPI(
+    title="HaeSiivooja Real-Time Marketplace Intelligence & AI Decision API",
+    version="2.0.0",
+)
+
+ServiceId = Literal["home_cleaning", "deep_cleaning", "move_out_cleaning"]
+
 
 class MatchRequest(BaseModel):
     city: str
@@ -17,10 +23,18 @@ class MatchRequest(BaseModel):
     max_price_cents: int | None = Field(default=None, gt=0)
     limit: int = Field(default=5, ge=1, le=20)
 
+
 class ForecastRequest(BaseModel):
     city: str
-    service_id: Literal["home_cleaning", "deep_cleaning", "move_out_cleaning"]
+    service_id: ServiceId
     date: str
+
+
+class DecisionRequest(BaseModel):
+    city: str
+    service_id: ServiceId
+    date: str
+
 
 def _cleaners() -> pd.DataFrame:
     path = ROOT / "data" / "cleaner_features.csv"
@@ -28,9 +42,75 @@ def _cleaners() -> pd.DataFrame:
         raise HTTPException(503, "Run the data and feature pipelines first")
     return pd.read_csv(path)
 
+
+def _forecast(city: str, service_id: str, date: str) -> float:
+    artifact = ROOT / "artifacts" / "demand_forecast.joblib"
+    if not artifact.exists():
+        raise HTTPException(503, "Train the demand forecast first")
+    bundle = joblib.load(artifact)
+    dt = pd.Timestamp(date)
+    row = pd.DataFrame([{
+        "city": city,
+        "service_id": service_id,
+        "day_of_week": dt.dayofweek,
+        "week_of_year": int(dt.isocalendar().week),
+        "month": dt.month,
+        "is_weekend": int(dt.dayofweek >= 5),
+        "dow_sin": np.sin(2 * np.pi * dt.dayofweek / 7),
+        "dow_cos": np.cos(2 * np.pi * dt.dayofweek / 7),
+    }])
+    return max(float(bundle["model"].predict(row[bundle["features"]])[0]), 0.0)
+
+
+def _capacity_proxy(city: str) -> float:
+    """
+    Public-case approximation only.
+
+    Production capacity must come from real-time cleaner availability,
+    blocked time, confirmed bookings and service compatibility.
+    """
+    df = _cleaners()
+    city_df = df[df.city == city].copy()
+    if city_df.empty:
+        return 0.0
+    historical_minutes = pd.read_csv(ROOT / "data" / "bookings.csv")["duration_min"]
+    median_booking_minutes = max(float(historical_minutes.median()), 60.0)
+    daily_minutes = city_df["weekly_capacity_minutes"].sum() / 7.0
+    return float(daily_minutes / median_booking_minutes)
+
+
+def _decision_from_gap(gap: float) -> list[dict]:
+    if gap <= 0:
+        return [{
+            "action": "no_capacity_intervention",
+            "reason": "Estimated capacity covers forecast demand.",
+            "human_approval_required": False,
+        }]
+
+    actions = [{
+        "action": "availability_campaign",
+        "reason": "Ask reliable cleaners to open additional availability.",
+        "human_approval_required": True,
+    }]
+    if gap >= 5:
+        actions.append({
+            "action": "expand_matching_radius",
+            "reason": "Evaluate nearby eligible cleaners outside the default radius.",
+            "human_approval_required": True,
+        })
+    if gap >= 10:
+        actions.append({
+            "action": "incentive_simulation",
+            "reason": "Simulate a temporary cleaner incentive before any financial action.",
+            "human_approval_required": True,
+        })
+    return actions
+
+
 @app.get("/health")
 def health():
     return {"status": "ok"}
+
 
 @app.post("/api/v1/match")
 def match_cleaners(req: MatchRequest):
@@ -64,27 +144,34 @@ def match_cleaners(req: MatchRequest):
         )
     }
 
+
 @app.post("/api/v1/demand-forecast")
 def demand_forecast(req: ForecastRequest):
-    artifact = ROOT / "artifacts" / "demand_forecast.joblib"
-    if not artifact.exists():
-        raise HTTPException(503, "Train the demand forecast first")
-    bundle = joblib.load(artifact)
-    date = pd.Timestamp(req.date)
-    row = pd.DataFrame([{
-        "city": req.city,
-        "service_id": req.service_id,
-        "day_of_week": date.dayofweek,
-        "week_of_year": int(date.isocalendar().week),
-        "month": date.month,
-        "is_weekend": int(date.dayofweek >= 5),
-        "dow_sin": np.sin(2 * np.pi * date.dayofweek / 7),
-        "dow_cos": np.cos(2 * np.pi * date.dayofweek / 7),
-    }])
-    prediction = max(float(bundle["model"].predict(row[bundle["features"]])[0]), 0.0)
+    prediction = _forecast(req.city, req.service_id, req.date)
     return {
         "city": req.city,
         "service_id": req.service_id,
         "date": req.date,
         "predicted_bookings": round(prediction, 2),
+    }
+
+
+@app.post("/api/v1/marketplace-decision")
+def marketplace_decision(req: DecisionRequest):
+    predicted = _forecast(req.city, req.service_id, req.date)
+    capacity = _capacity_proxy(req.city)
+    gap = predicted - capacity
+    return {
+        "city": req.city,
+        "service_id": req.service_id,
+        "date": req.date,
+        "predicted_bookings": round(predicted, 2),
+        "estimated_capacity_bookings": round(capacity, 2),
+        "supply_demand_gap": round(gap, 2),
+        "recommended_actions": _decision_from_gap(gap),
+        "decision_mode": "recommendation_only",
+        "note": (
+            "Public-case capacity is a proxy. Production decisions must use real-time "
+            "availability, confirmed bookings, service compatibility and policy checks."
+        ),
     }

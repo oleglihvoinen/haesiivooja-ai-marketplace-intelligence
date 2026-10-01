@@ -1,0 +1,48 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://haesiivooja.fi/schemas/booking-event-v1.json",
+  "title": "HaeSiivooja Booking Event v1",
+  "type": "object",
+  "required": [
+    "event_id",
+    "event_type",
+    "event_version",
+    "occurred_at",
+    "booking_id",
+    "cleaner_id",
+    "city",
+    "service_id",
+    "status"
+  ],
+  "properties": {
+    "event_id": { "type": "string" },
+    "event_type": {
+      "type": "string",
+      "enum": ["booking_created", "booking_updated", "booking_cancelled", "booking_completed"]
+    },
+    "event_version": { "const": 1 },
+    "occurred_at": { "type": "string", "format": "date-time" },
+    "booking_id": { "type": "string" },
+    "customer_key": {
+      "type": ["string", "null"],
+      "description": "Pseudonymous analytical customer identifier; never an email or phone number."
+    },
+    "cleaner_id": { "type": "string" },
+    "city": { "type": "string" },
+    "service_id": { "type": "string" },
+    "start_time": { "type": ["string", "null"], "format": "date-time" },
+    "duration_min": { "type": ["integer", "null"], "minimum": 0 },
+    "total_cents": { "type": ["integer", "null"], "minimum": 0 },
+    "status": { "type": "string" },
+    "source": {
+      "type": "object",
+      "properties": {
+        "system": { "const": "haesiivooja-mysql" },
+        "table": { "const": "bookings" }
+      },
+      "required": ["system", "table"],
+      "additionalProperties": false
+    }
+  },
+  "additionalProperties": false
+}
